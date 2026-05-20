@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>叠塔大师 - 游戏中</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <!-- HUD -->
+  <div id="hudBox">
+    <span class="hud" id="hudS">🏗️ 0</span>
+    <span class="hud" id="hudB">👑 0</span>
+  </div>
+
+  <!-- 难度选择 -->
+  <div id="diffSelect" style="position:absolute;top:55px;left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:6;">
+    <button class="diff-btn diff-active" data-diff="easy" onclick="App.Game.setDifficulty('easy')">🟢 简单</button>
+    <button class="diff-btn" data-diff="normal" onclick="App.Game.setDifficulty('normal')">🟡 普通</button>
+    <button class="diff-btn" data-diff="hard" onclick="App.Game.setDifficulty('hard')">🔴 困难</button>
+  </div>
+
+  <!-- 道具栏 -->
+  <div id="itemBar" style="position:absolute;bottom:20px;left:0;right:0;display:none;justify-content:center;gap:8px;z-index:6;"></div>
+
+  <!-- 开始界面 -->
+  <div id="startUI" class="overlay on">
+    <div class="panel">
+      <h2>🏗️ 准备开始</h2>
+      <p class="sub">难度：<span id="diffLabel">🟡 普通</span></p>
+      <button class="btn" onclick="App.Game.start()">开始游戏</button>
+      <div style="margin-top:10px;">
+        <button class="btn-sm" onclick="App.UI.show('tutorialUI')">📖 新手教程</button>
+        <button class="btn-sm" onclick="location.href='index.html'">← 返回首页</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结束界面 -->
+  <div id="endUI" class="overlay">
+    <div class="panel">
+      <p style="color:#888;">本次得分</p>
+      <p class="big-score" id="endScore">0</p>
+      <p class="best" id="endBest"></p>
+      <p id="endBadge" style="margin-top:4px;"></p>
+      <div id="achPopup" style="margin:6px 0;"></div>
+      <button class="btn" onclick="App.Game.start()" style="margin-top:14px;">再来一把</button>
+      <button class="btn btn-gold" id="reviveBtn" onclick="App.Game.revive()" style="display:none;margin-top:8px;">💖 复活续玩</button>
+      <div style="margin-top:12px;">
+        <button class="btn-sm" onclick="App.UI.share()">📋 分享战绩</button>
+        <button class="btn-sm" onclick="location.href='index.html'">🚪 退出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新手引导 -->
+  <div id="tutorialUI" class="overlay">
+    <div class="panel">
+      <h2>📖 新手教程</h2>
+      <div id="tutSteps" style="text-align:left;margin:12px 0;">
+        <div class="tut-step">1️⃣ 方块在平台上左右滑动</div>
+        <div class="tut-step">2️⃣ 点击屏幕让方块落下</div>
+        <div class="tut-step">3️⃣ 没对齐的部分会被切掉</div>
+        <div class="tut-step">4️⃣ 对齐越准，平台越大，堆得越高</div>
+        <div class="tut-step">💡 连续完美对齐获得 Combo 加分</div>
+        <div class="tut-step">🛠️ 善用道具帮你渡过难关</div>
+      </div>
+      <button class="btn btn-sm" onclick="App.UI.hide('tutorialUI')">知道了</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/game.js"></script>
+<script src="js/game-init.js"></script>
+</body>
+</html>

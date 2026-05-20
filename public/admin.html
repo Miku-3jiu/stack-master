@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 - 叠塔大师</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .admin-wrap { max-width:600px; margin:20px auto; padding:20px; color:#eee; }
+  .admin-wrap h1 { font-size:24px; margin-bottom:20px; }
+  .stats-row { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:20px; }
+  .data-table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px; }
+  .data-table th,.data-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06); text-align:left; }
+  .data-table th { color:#888; font-weight:500; }
+  .section { margin:24px 0; }
+  .section h3 { color:#ffd700; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="admin-wrap">
+  <h1>🛡️ 管理后台</h1>
+  <p style="color:#888;font-size:13px;margin-bottom:16px;">需要 admin 账号登录</p>
+
+  <!-- 登录 -->
+  <div id="adminLogin">
+    <input type="text" id="adminUser" placeholder="用户名" maxlength="20" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;margin-right:8px;">
+    <input type="password" id="adminPass" placeholder="密码" maxlength="100" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;margin-right:8px;">
+    <button class="btn-sm" onclick="adminLogin()">登录</button>
+    <p id="adminErr" style="color:#ff6b6b;font-size:13px;margin-top:6px;"></p>
+    <a href="index.html" style="font-size:13px;color:#888;">← 返回首页</a>
+  </div>
+
+  <!-- 仪表盘 -->
+  <div id="adminPanel" style="display:none;">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="section">
+      <h3>📊 活跃趋势（近7天）</h3>
+      <table class="data-table" id="dailyTable"></table>
+    </div>
+    <div class="section">
+      <h3>🎨 皮肤销量</h3>
+      <table class="data-table" id="skinTable"></table>
+    </div>
+    <div class="section">
+      <h3>📈 难度分布</h3>
+      <table class="data-table" id="diffTable"></table>
+    </div>
+    <div class="section">
+      <h3>👥 用户列表（最近50）</h3>
+      <table class="data-table" id="userTable"></table>
+    </div>
+    <a href="index.html" style="font-size:13px;color:#888;">← 返回首页</a>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/ui.js"></script>
+<script>
+var adminToken = null;
+
+function adminLogin() {
+  var u = document.getElementById('adminUser').value.trim();
+  var p = document.getElementById('adminPass').value;
+  if (!u || !p) return;
+
+  App.api('/auth/login', { method:'POST', body:{username:u, password:p} }).then(function(data) {
+    if (data.error) { document.getElementById('adminErr').textContent = data.error; return; }
+    adminToken = data.token;
+    document.getElementById('adminLogin').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    loadDashboard();
+  });
+}
+
+function loadDashboard() {
+  fetch('/api/admin/stats', { headers:{'Authorization':'Bearer '+adminToken} }).then(function(r){return r.json();}).then(function(d){
+    if (d.error) { alert(d.error); return; }
+    document.getElementById('statsRow').innerHTML =
+      '<div class="admin-stat"><div class="val">'+d.users+'</div><div class="lbl">总用户</div></div>'
+      +'<div class="admin-stat"><div class="val">'+d.scores+'</div><div class="lbl">总局数</div></div>'
+      +'<div class="admin-stat"><div class="val">¥'+(d.revenue*3)+'</div><div class="lbl">预估收入</div></div>'
+      +'<div class="admin-stat"><div class="val">'+d.todayUsers+'</div><div class="lbl">今日新用户</div></div>'
+      +'<div class="admin-stat"><div class="val">'+d.todayGames+'</div><div class="lbl">今日对局</div></div>';
+
+    // 日活
+    var da = '<tr><th>日期</th><th>活跃用户</th><th>对局数</th></tr>';
+    for (var i=0;i<d.dailyActive.length;i++) {
+      da += '<tr><td>'+d.dailyActive[i].day+'</td><td>'+d.dailyActive[i].users+'</td><td>'+d.dailyActive[i].games+'</td></tr>';
+    }
+    document.getElementById('dailyTable').innerHTML = da;
+
+    // 皮肤销量
+    var skinNames = {classic:'经典木纹',neon:'霓虹之夜',cyber:'赛博朋克',catpaw:'猫爪肉球',golden:'金色传说'};
+    var ss = '<tr><th>皮肤</th><th>销量</th></tr>';
+    for (var j=0;j<d.skinSales.length;j++) {
+      ss += '<tr><td>'+ (skinNames[d.skinSales[j].skin_id]||d.skinSales[j].skin_id) +'</td><td>'+d.skinSales[j].cnt+'</td></tr>';
+    }
+    document.getElementById('skinTable').innerHTML = ss || '<tr><td colspan="2">暂无数据</td></tr>';
+
+    // 难度分布
+    var dd = '<tr><th>难度</th><th>局数</th></tr>';
+    for (var k=0;k<d.difficultyDistribution.length;k++) {
+      dd += '<tr><td>'+d.difficultyDistribution[k].difficulty+'</td><td>'+d.difficultyDistribution[k].cnt+'</td></tr>';
+    }
+    document.getElementById('diffTable').innerHTML = dd;
+  });
+
+  fetch('/api/admin/users', { headers:{'Authorization':'Bearer '+adminToken} }).then(function(r){return r.json();}).then(function(d){
+    var ut = '<tr><th>ID</th><th>用户名</th><th>游戏次数</th><th>总层数</th><th>皮肤数</th><th>注册时间</th></tr>';
+    for (var i=0;i<d.users.length;i++) {
+      var u = d.users[i];
+      ut += '<tr><td>'+u.id+'</td><td>'+u.username+'</td><td>'+u.games_played+'</td><td>'+u.total_layers+'</td><td>'+u.skin_count+'</td><td>'+u.created_at+'</td></tr>';
+    }
+    document.getElementById('userTable').innerHTML = ut;
+  });
+}
+</script>
+</body>
+</html>

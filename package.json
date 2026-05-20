@@ -1,0 +1,17 @@
+{
+  "name": "stack-master",
+  "version": "1.0.0",
+  "description": "叠塔大师 - Stack Master Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

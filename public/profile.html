@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心 - 叠塔大师</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { overflow-y:auto !important; height:auto !important; }
+  .profile-wrap { max-width:500px; margin:0 auto; padding:20px; color:#e0e0e0; min-height:100vh; }
+  .profile-header { text-align:center; padding:20px 0; }
+  .profile-header .avatar { font-size:48px; }
+  .profile-header .name { font-size:20px; font-weight:900; color:#fff; margin-top:4px; }
+  .stats-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:14px 0; }
+  .stat-card {
+    background:rgba(255,255,255,0.05); border-radius:14px; padding:12px 16px;
+    text-align:center; min-width:75px; border:1px solid rgba(255,255,255,0.06);
+  }
+  .stat-card .val { font-size:24px; font-weight:900; color:#ffd700; }
+  .stat-card .lbl { font-size:11px; color:#888; margin-top:2px; }
+  .section { margin:20px 0; }
+  .section h3 { font-size:15px; color:#ffd700; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:6px; }
+  .diff-best { display:flex; gap:8px; }
+  .db-card {
+    flex:1; background:rgba(255,255,255,0.04); border-radius:12px; padding:10px;
+    text-align:center; border:1px solid rgba(255,255,255,0.06);
+  }
+  .db-emoji { font-size:24px; } .db-score { font-size:20px; font-weight:900; color:#fff; } .db-label { font-size:10px; color:#888; }
+  .ach-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .ach-item {
+    padding:8px; border-radius:10px; text-align:center; font-size:11px;
+    border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02);
+  }
+  .ach-item.locked { opacity:0.4; filter:grayscale(1); }
+  .ach-item.done { border-color:rgba(255,215,0,0.4); background:rgba(255,215,0,0.08); }
+  .ach-emoji { font-size:24px; } .ach-name { font-weight:700; font-size:12px; } .ach-desc { color:#888; font-size:10px; }
+  .skin-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .skin-chip {
+    padding:5px 12px; border-radius:16px; font-size:11px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:#ccc;
+  }
+  .skin-chip.active { border-color:#ffd700; color:#ffd700; background:rgba(255,215,0,0.12); }
+  .form-row { display:flex; gap:8px; margin:8px 0; align-items:center; }
+  .form-row input {
+    flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.06); color:#fff; font-size:13px; outline:none;
+  }
+  .form-row input:focus { border-color:#ff6b6b; }
+  .form-msg { font-size:12px; min-height:18px; }
+  .form-msg.ok { color:#51cf66; } .form-msg.err { color:#ff6b6b; }
+  .history-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .history-row .h-score { font-weight:700; color:#ffd700; min-width:45px; }
+  .history-row .h-diff { color:#aaa; }
+  .history-row .h-date { color:#666; font-size:11px; }
+  .guest-hint { text-align:center; padding:60px 20px; }
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div class="profile-wrap" id="profileContent">
+  <p style="text-align:center;color:#888;padding:40px;">加载中...</p>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+var token = localStorage.getItem('sm_token');
+if (!token) {
+  document.getElementById('profileContent').innerHTML = '<div class="guest-hint">'
+    + '<p>👤 请先登录</p>'
+    + '<a href="login.html"><button class="btn">登录</button></a>'
+    + '<a href="index.html" style="display:block;margin-top:12px;font-size:13px;color:#888;">← 返回首页</a>'
+    + '</div>';
+} else {
+  Promise.all([
+    fetch('/api/auth/me', { headers:{'Authorization':'Bearer '+token} }).then(function(r){return r.json();}),
+    fetch('/api/user/stats', { headers:{'Authorization':'Bearer '+token} }).then(function(r){return r.json();}),
+    fetch('/api/user/achievements', { headers:{'Authorization':'Bearer '+token} }).then(function(r){return r.json();}),
+    fetch('/api/user/history', { headers:{'Authorization':'Bearer '+token} }).then(function(r){return r.json();})
+  ]).then(function(results) {
+    render(results[0].user, results[1], results[2], results[3]);
+  }).catch(function(e) {
+    document.getElementById('profileContent').innerHTML = '<p style="text-align:center;color:#ff6b6b;padding:40px;">加载失败：' + e.message + '</p>';
+  });
+}
+
+function render(user, stats, achData, historyData) {
+  var skinNames = {classic:'🪵 经典木纹',neon:'🌃 霓虹之夜',cyber:'🤖 赛博朋克',catpaw:'🐾 猫爪肉球',golden:'👑 金色传说'};
+  var diffEmoji = {easy:'🟢',normal:'🟡',hard:'🔴'};
+  var diffName = {easy:'简单',normal:'普通',hard:'困难'};
+
+  // 皮肤
+  var ownedHtml = '';
+  for (var i = 0; i < (stats.ownedSkins||[]).length; i++) {
+    var sid = stats.ownedSkins[i];
+    ownedHtml += '<span class="skin-chip' + (user.activeSkin === sid ? ' active' : '') + '">' + (skinNames[sid]||sid) + '</span>';
+  }
+
+  // 各难度最高
+  var bestHtml = '';
+  ['easy','normal','hard'].forEach(function(d) {
+    bestHtml += '<div class="db-card"><div class="db-emoji">' + diffEmoji[d] + '</div>'
+      + '<div class="db-score">' + ((stats.bestByDifficulty||{})[d] || 0) + '</div>'
+      + '<div class="db-label">' + diffName[d] + '</div></div>';
+  });
+
+  // 成就
+  var achHtml = '';
+  var achDefs = achData.achievements;
+  var unlocked = achData.unlocked;
+  for (var j = 0; j < achDefs.length; j++) {
+    var a = achDefs[j];
+    var isDone = unlocked.indexOf(a.id) >= 0;
+    achHtml += '<div class="ach-item ' + (isDone ? 'done' : 'locked') + '">'
+      + '<div class="ach-emoji">' + (isDone ? a.emoji : '🔒') + '</div>'
+      + '<div class="ach-name">' + a.name + '</div>'
+      + '<div class="ach-desc">' + a.desc + '</div></div>';
+  }
+
+  // 历史
+  var histHtml = '';
+  var hist = historyData.history || [];
+  if (hist.length === 0) {
+    histHtml = '<p style="color:#666;font-size:13px;text-align:center;padding:10px;">暂无记录</p>';
+  } else {
+    for (var k = 0; k < hist.length; k++) {
+      var h = hist[k];
+      histHtml += '<div class="history-row">'
+        + '<span class="h-score">' + h.score + ' 层</span>'
+        + '<span class="h-diff">' + h.difficultyLabel + '</span>'
+        + '<span class="h-date">' + (h.date||'').slice(0,16) + '</span></div>';
+    }
+  }
+
+  var html = ''
+    + '<div class="profile-header">'
+    + '<div class="avatar">👤</div>'
+    + '<div class="name">' + (user.nickname || user.username) + '</div>'
+    + '<div style="font-size:12px;color:#666;">账号：' + user.username + '（不可修改）</div>'
+    + '</div>'
+
+    + '<div class="stats-row">'
+    + '<div class="stat-card"><div class="val">' + (stats.gamesPlayed||0) + '</div><div class="lbl">游戏局数</div></div>'
+    + '<div class="stat-card"><div class="val">' + (stats.totalLayers||0) + '</div><div class="lbl">总堆叠层数</div></div>'
+    + '<div class="stat-card"><div class="val">' + (stats.achievementsUnlocked||0) + '/' + (stats.achievementsTotal||15) + '</div><div class="lbl">成就进度</div></div>'
+    + '<div class="stat-card"><div class="val">💖' + (stats.reviveTokens||0) + '</div><div class="lbl">复活令牌</div></div>'
+    + '</div>'
+
+    + '<div class="section"><h3>🏆 各模式最高分</h3><div class="diff-best">' + bestHtml + '</div></div>'
+    + '<div class="section"><h3>🎨 已拥有皮肤</h3><div class="skin-row">' + ownedHtml + '</div></div>'
+
+    // 修改昵称
+    + '<div class="section"><h3>✏️ 修改昵称</h3>'
+    + '<p style="font-size:12px;color:#888;margin-bottom:6px;">昵称用于排行榜展示，不影响登录账号</p>'
+    + '<div class="form-row"><input id="newNick" placeholder="输入新昵称" maxlength="20" value="' + (user.nickname || '') + '">'
+    + '<button class="btn-sm" onclick="changeNick()">保存</button></div>'
+    + '<p class="form-msg" id="nickMsg"></p></div>'
+
+    // 修改密码
+    + '<div class="section"><h3>🔒 修改密码</h3>'
+    + '<div class="form-row"><input id="oldPass" type="password" placeholder="原密码"></div>'
+    + '<div class="form-row"><input id="newPass" type="password" placeholder="新密码（至少6位）"></div>'
+    + '<button class="btn-sm" onclick="changePass()" style="width:100%;">修改密码</button>'
+    + '<p class="form-msg" id="passMsg"></p></div>'
+
+    + '<div class="section"><h3>📋 游戏历史</h3>' + histHtml + '</div>'
+
+    + '<div class="section"><h3>🏅 成就徽章</h3><div class="ach-grid">' + achHtml + '</div></div>'
+
+    + '<div style="text-align:center;margin:24px 0;padding-bottom:30px;">'
+    + '<a href="index.html"><button class="btn-sm">← 返回首页</button></a>'
+    + '</div>';
+
+  document.getElementById('profileContent').innerHTML = html;
+}
+
+function changePass() {
+  var oldP = document.getElementById('oldPass').value;
+  var newP = document.getElementById('newPass').value;
+  var msg = document.getElementById('passMsg');
+  msg.className = 'form-msg';
+  if (!oldP || !newP) { msg.className = 'form-msg err'; msg.textContent = '请填写完整'; return; }
+  if (newP.length < 6) { msg.className = 'form-msg err'; msg.textContent = '新密码至少6位'; return; }
+
+  fetch('/api/auth/password', {
+    method: 'PUT',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+    body: JSON.stringify({ oldPassword:oldP, newPassword:newP })
+  }).then(function(r){return r.json();}).then(function(d){
+    if (d.error) { msg.className = 'form-msg err'; msg.textContent = d.error; }
+    else { msg.className = 'form-msg ok'; msg.textContent = '✅ ' + d.message; }
+  });
+}
+
+function changeNick() {
+  var nick = document.getElementById('newNick').value.trim();
+  var msg = document.getElementById('nickMsg');
+  msg.className = 'form-msg';
+  if (nick.length < 2) { msg.className = 'form-msg err'; msg.textContent = '昵称至少2个字符'; return; }
+
+  fetch('/api/auth/nickname', {
+    method: 'PUT',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+    body: JSON.stringify({ nickname:nick })
+  }).then(function(r){return r.json();}).then(function(d){
+    if (d.error) { msg.className = 'form-msg err'; msg.textContent = d.error; }
+    else {
+      msg.className = 'form-msg ok'; msg.textContent = '✅ 昵称已改为 ' + d.nickname;
+    }
+  });
+}
+</script>
+</body>
+</html>

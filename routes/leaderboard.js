@@ -8,16 +8,17 @@ function createLeaderboardRouter(db) {
   // GET /api/leaderboard?difficulty=normal — 前 20 名（按难度分榜）
   router.get('/', function(req, res) {
     var difficulty = req.query.difficulty || 'normal';
+    var gameType = req.query.game_type || 'stack';
 
     var rows = db.prepare(`
       SELECT CASE WHEN u.nickname != '' THEN u.nickname ELSE u.username END as display_name, u.username, MAX(s.score) as best_score, MAX(s.created_at) as latest_date
       FROM scores s
       JOIN users u ON u.id = s.user_id
-      WHERE s.difficulty = ?
+      WHERE s.difficulty = ? AND s.game_type = ?
       GROUP BY s.user_id
       ORDER BY best_score DESC
       LIMIT 20
-    `).all(difficulty);
+    `).all(difficulty, gameType);
 
     var leaderboard = [];
     for (var i = 0; i < rows.length; i++) {
@@ -36,6 +37,7 @@ function createLeaderboardRouter(db) {
   router.post('/', auth, function(req, res) {
     var score = parseInt(req.body.score, 10);
     var difficulty = req.body.difficulty || 'normal';
+    var gameType = req.body.game_type || 'stack';
     var validDiff = ['easy', 'normal', 'hard'];
 
     if (isNaN(score) || score < 0 || score > 999999) {
@@ -46,22 +48,22 @@ function createLeaderboardRouter(db) {
     }
 
     // 插入分数
-    db.prepare('INSERT INTO scores (user_id, score, difficulty) VALUES (?, ?, ?)').run(req.user.id, score, difficulty);
+    db.prepare('INSERT INTO scores (user_id, score, difficulty, game_type) VALUES (?, ?, ?, ?)').run(req.user.id, score, difficulty, gameType);
 
     // 更新用户统计
     db.prepare('UPDATE users SET games_played = games_played + 1, total_layers = total_layers + ? WHERE id = ?').run(score, req.user.id);
 
-    // 查询该难度下的最高分和排名
-    var best = db.prepare('SELECT MAX(score) as best FROM scores WHERE user_id = ? AND difficulty = ?').get(req.user.id, difficulty);
+    // 查询该难度+游戏类型下的最高分和排名
+    var best = db.prepare('SELECT MAX(score) as best FROM scores WHERE user_id = ? AND difficulty = ? AND game_type = ?').get(req.user.id, difficulty, gameType);
     var bestScore = best ? best.best : score;
 
     var rankRow = db.prepare(`
       SELECT COUNT(*) as rank FROM (
         SELECT user_id, MAX(score) as best
-        FROM scores WHERE difficulty = ?
+        FROM scores WHERE difficulty = ? AND game_type = ?
         GROUP BY user_id HAVING best > ?
       )
-    `).get(difficulty, bestScore);
+    `).get(difficulty, gameType, bestScore);
 
     var rank = rankRow ? rankRow.rank + 1 : 1;
 

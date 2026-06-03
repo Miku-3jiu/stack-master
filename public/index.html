@@ -3,41 +3,72 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>叠塔大师 - Stack Master</title>
+<title>叠塔大师 - 游戏大厅</title>
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .home-wrap {
-    width:100vw; max-width:480px; min-height:100vh;
-    display:flex; flex-direction:column; justify-content:center; align-items:center;
-    padding:40px 20px; text-align:center;
+  body { overflow-y:auto !important; height:auto !important; min-height:100vh; }
+  .lobby { max-width:480px; margin:0 auto; padding:20px; text-align:center; color:#fff; }
+  .lobby h1 { font-size:28px; margin-bottom:4px; }
+  .lobby .slogan { color:#888; font-size:13px; margin-bottom:20px; }
+  .user-row { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px; }
+  .game-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  .game-card {
+    background:rgba(22,22,55,0.96); border-radius:18px; padding:20px 14px;
+    text-align:center; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s;
+    border:1px solid rgba(255,255,255,0.08); text-decoration:none; color:#e0e0e0;
+    display:block;
   }
-  .logo { font-size:56px; margin-bottom:8px; }
-  .title { font-size:36px; font-weight:900; color:#fff; margin-bottom:4px; }
-  .title-en { font-size:16px; color:#888; margin-bottom:30px; letter-spacing:2px; }
-  .menu-btn { display:block; width:220px; margin:8px auto; }
-  .user-bar { margin-bottom:20px; }
-  .user-bar .name { color:#ffd700; font-size:16px; font-weight:700; }
+  .game-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+  .game-card .icon { font-size:44px; margin-bottom:8px; }
+  .game-card .name { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .game-card .info { font-size:11px; color:#777; }
+  .game-card.stack { border-left:3px solid #ff6b6b; }
+  .game-card.memory { border-left:3px solid #ffd700; }
+  .game-card.reaction { border-left:3px solid #51cf66; }
+  .game-card.math { border-left:3px solid #6bc5ff; }
+  .bottom-nav { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin:20px 0 30px; }
 </style>
 </head>
 <body>
 
-<div class="home-wrap">
-  <div class="logo">🏗️</div>
-  <div class="title">叠塔大师</div>
-  <div class="title-en">STACK MASTER</div>
+<div class="lobby">
+  <h1>🏗️ 叠塔大师</h1>
+  <p class="slogan">休闲游戏平台 · 挑战你的极限</p>
 
-  <div class="user-bar" id="userBar"></div>
+  <div class="user-row" id="userRow"></div>
 
-  <button class="btn menu-btn" onclick="location.href='game.html'">🎮 开始游戏</button>
-  <button class="btn-sm menu-btn" onclick="App.Shop.show()">🎨 皮肤商城</button>
-  <button class="btn-sm menu-btn" onclick="App.LB.show()">🏆 排行榜</button>
+  <div class="game-grid">
+    <a href="game.html" class="game-card stack">
+      <div class="icon">🏗️</div>
+      <div class="name">叠塔大师</div>
+      <div class="info">精准堆叠 · 三层难度</div>
+    </a>
+    <a href="game-memory.html" class="game-card memory">
+      <div class="icon">🧠</div>
+      <div class="name">记忆翻牌</div>
+      <div class="info">翻转配对 · 考验脑力</div>
+    </a>
+    <a href="game-reaction.html" class="game-card reaction">
+      <div class="icon">🎯</div>
+      <div class="name">反应速度</div>
+      <div class="info">毫秒之间 · 挑战极限</div>
+    </a>
+    <a href="game-math.html" class="game-card math">
+      <div class="icon">🧮</div>
+      <div class="name">算数挑战</div>
+      <div class="info">快问快答 · 限时15秒</div>
+    </a>
+  </div>
 
-  <div id="authBtns" style="margin-top:20px;"></div>
-
-  <p style="font-size:11px;color:#555;margin-top:20px;" id="skinInfo">当前皮肤：经典木纹</p>
+  <div class="bottom-nav">
+    <button class="btn-sm" onclick="App.Shop.show()">🛒 商城</button>
+    <button class="btn-sm" onclick="App.LB.show()">🏆 排行</button>
+    <a href="profile.html"><button class="btn-sm">👤 个人</button></a>
+    <a href="admin.html"><button class="btn-sm">🛡️ 管理</button></a>
+  </div>
 </div>
 
-<!-- 皮肤商城 overlay -->
+<!-- 商城 overlay -->
 <div id="shopUI" class="overlay">
   <div class="panel" style="max-width:380px;">
     <h2>🛒 商城</h2>
@@ -56,12 +87,12 @@
 <div id="lbUI" class="overlay">
   <div class="panel">
     <h2>🏆 排行榜</h2>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;" id="lbTabs"></div>
     <div id="lbContent" style="max-height:300px;overflow-y:auto;"></div>
     <button class="btn-sm" onclick="App.UI.hide('lbUI')">返回</button>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script src="js/config.js"></script>

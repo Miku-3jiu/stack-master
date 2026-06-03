@@ -28,6 +28,7 @@ function initDatabase() {
       user_id INTEGER NOT NULL,
       score INTEGER NOT NULL,
       difficulty TEXT NOT NULL DEFAULT 'normal',
+      game_type TEXT NOT NULL DEFAULT 'stack',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );

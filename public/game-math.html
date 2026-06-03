@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>算数挑战 - 叠塔大师</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { display:flex; justify-content:center; align-items:center; height:100vh; background:#1a1a2e; flex-direction:column; }
+  .math-wrap { width:100vw; max-width:450px; text-align:center; color:#fff; padding:20px; }
+  .math-question { font-size:42px; font-weight:900; margin:20px 0; color:#ffd700; }
+  .math-answers { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:340px; margin:0 auto; }
+  .math-ans {
+    padding:16px; border-radius:14px; font-size:22px; font-weight:700; cursor:pointer;
+    background:rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.15);
+    color:#fff; transition:all 0.15s;
+  }
+  .math-ans:active { transform:scale(0.95); }
+  .math-ans.correct { background:#51cf66; border-color:#51cf66; }
+  .math-ans.wrong { background:#ff6b6b; border-color:#ff6b6b; }
+  .math-info { display:flex; justify-content:space-around; margin:12px 0; font-size:14px; color:#aaa; }
+  .math-info span { color:#ffd700; font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="math-wrap">
+  <h2>🧮 算数挑战</h2>
+  <div class="math-info">
+    <div>正确：<span id="correct">0</span></div>
+    <div>剩余：<span id="remain">15s</span></div>
+    <div>得分：<span id="score">0</span></div>
+  </div>
+  <div class="math-question" id="question">3 × 7 = ?</div>
+  <div class="math-answers" id="answers"></div>
+  <div id="result" style="margin:16px 0;min-height:30px;"></div>
+  <div>
+    <button class="btn btn-sm" onclick="startGame()">🔄 重新开始</button>
+    <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+var score=0,correct=0,timeLeft=15,timerId=null,playing=false;
+
+function startGame(){
+  clearInterval(timerId);
+  score=0;correct=0;timeLeft=15;playing=true;
+  document.getElementById('correct').textContent='0';
+  document.getElementById('score').textContent='0';
+  document.getElementById('remain').textContent='15s';
+  document.getElementById('result').innerHTML='';
+  timerId=setInterval(function(){
+    timeLeft--;document.getElementById('remain').textContent=timeLeft+'s';
+    if(timeLeft<=0) endGame();
+  },1000);
+  newQuestion();
+}
+
+function newQuestion(){
+  if(!playing) return;
+  var a=Math.floor(Math.random()*12)+2;
+  var b=Math.floor(Math.random()*12)+2;
+  var ops=['+','-','×'];
+  var op=ops[Math.floor(Math.random()*3)];
+  var ans=op==='+'?a+b:op==='-'?a-b:a*b;
+
+  // 生成3个干扰答案
+  var wrongs=[];
+  while(wrongs.length<3){
+    var w=ans+(Math.floor(Math.random()*10)-5);
+    if(w!==ans&&w>=0&&wrongs.indexOf(w)<0) wrongs.push(w);
+  }
+  var choices=[ans].concat(wrongs).sort(function(){return Math.random()-0.5;});
+
+  document.getElementById('question').textContent=a+' '+op+' '+b+' = ?';
+  var html='';
+  for(var i=0;i<choices.length;i++){
+    html+='<button class="math-ans" onclick="answer('+choices[i]+','+ans+',this)">'+choices[i]+'</button>';
+  }
+  document.getElementById('answers').innerHTML=html;
+}
+
+function answer(val,ans,btn){
+  if(!playing) return;
+  var btns=document.querySelectorAll('.math-ans');
+  for(var i=0;i<btns.length;i++) btns[i].disabled=true;
+
+  if(val===ans){
+    btn.classList.add('correct');
+    correct++;score+=10+(timeLeft>10?5:0);
+    document.getElementById('correct').textContent=correct;
+    document.getElementById('score').textContent=score;
+  }else{
+    btn.classList.add('wrong');
+    // 高亮正确答案
+    for(var j=0;j<btns.length;j++){
+      if(parseInt(btns[j].textContent)===ans) btns[j].classList.add('correct');
+    }
+  }
+  setTimeout(function(){newQuestion();},400);
+}
+
+function endGame(){
+  playing=false;clearInterval(timerId);
+  document.getElementById('remain').textContent='0s';
+  document.getElementById('result').innerHTML='<p style="font-size:20px;color:#ffd700;">⏱ 时间到！答对'+correct+'题，得分'+score+'</p>';
+  document.getElementById('answers').innerHTML='';
+  document.getElementById('question').textContent='游戏结束';
+  submitScore(score);
+}
+
+function submitScore(s){
+  if(!App.token){App.token=localStorage.getItem('sm_token')||null;}
+  if(!App.token) return;
+  fetch('/api/leaderboard',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+App.token},body:JSON.stringify({score:s,difficulty:'normal',game_type:'math'})}).catch(function(){});
+}
+
+App.token=localStorage.getItem('sm_token')||null;
+if(App.token){fetch('/api/auth/me',{headers:{Authorization:'Bearer '+App.token}}).then(function(r){return r.json();}).then(function(d){if(d.user)App.user=d.user;});}
+startGame();
+</script>
+</body>
+</html>

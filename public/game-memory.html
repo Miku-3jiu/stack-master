@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>记忆翻牌 - 叠塔大师</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { display:flex; justify-content:center; align-items:center; height:100vh; background:#1a1a2e; flex-direction:column; }
+  .mem-wrap { width:100vw; max-width:450px; text-align:center; color:#fff; padding:20px; }
+  .mem-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:20px auto; max-width:380px; }
+  .mem-card {
+    aspect-ratio:1; border-radius:12px; cursor:pointer; font-size:36px;
+    background:linear-gradient(135deg,#2a2a4a,#3a3a5a);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform 0.3s,background 0.2s; border:2px solid rgba(255,255,255,0.1);
+  }
+  .mem-card.flipped { background:#ffd700; color:#1a1a2e; transform:rotateY(180deg); border-color:#ffd700; }
+  .mem-card.matched { background:rgba(81,207,102,0.3); border-color:#51cf66; opacity:0.7; cursor:default; }
+  .mem-info { display:flex; justify-content:space-around; margin:12px 0; font-size:14px; color:#aaa; }
+  .mem-info span { color:#ffd700; font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="mem-wrap">
+  <h2>🧠 记忆翻牌</h2>
+  <div class="mem-info">
+    <div>步数：<span id="moves">0</span></div>
+    <div>配对：<span id="pairs">0/8</span></div>
+    <div>时间：<span id="timer">0s</span></div>
+  </div>
+  <div class="mem-grid" id="grid"></div>
+  <div id="result" style="margin:12px 0;min-height:30px;"></div>
+  <div class="btn-row">
+    <button class="btn btn-sm" onclick="startGame()">🔄 重新开始</button>
+    <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+var cards=[],flipped=[],matched=[],moves=0,pairs=0,timer=0,timerInt=null,locked=false;
+var emojis=['🍎','🍋','🍇','🍒','🌈','⭐','🔥','💎'];
+
+function startGame(){
+  clearInterval(timerInt);
+  var items=emojis.concat(emojis);
+  cards=items.sort(function(){return Math.random()-0.5;});
+  flipped=[];matched=[];moves=0;pairs=0;timer=0;locked=false;
+  document.getElementById('moves').textContent='0';
+  document.getElementById('pairs').textContent='0/8';
+  document.getElementById('timer').textContent='0s';
+  document.getElementById('result').innerHTML='';
+  render();
+  timerInt=setInterval(function(){timer++;document.getElementById('timer').textContent=timer+'s';},1000);
+}
+
+function render(){
+  var html='';
+  for(var i=0;i<cards.length;i++){
+    var cls='mem-card';
+    if(matched.indexOf(i)>=0) cls+=' matched';
+    else if(flipped.indexOf(i)>=0) cls+=' flipped';
+    var show=(flipped.indexOf(i)>=0||matched.indexOf(i)>=0)?cards[i]:'?';
+    html+='<div class="'+cls+'" onclick="clickCard('+i+')">'+show+'</div>';
+  }
+  document.getElementById('grid').innerHTML=html;
+}
+
+function clickCard(i){
+  if(locked||flipped.indexOf(i)>=0||matched.indexOf(i)>=0) return;
+  flipped.push(i);render();
+  if(flipped.length===2){
+    moves++;document.getElementById('moves').textContent=moves;
+    if(cards[flipped[0]]===cards[flipped[1]]){
+      matched=matched.concat(flipped);flipped=[];pairs++;
+      document.getElementById('pairs').textContent=pairs+'/8';
+      if(pairs===8) win();
+      render();
+    }else{
+      locked=true;
+      setTimeout(function(){flipped=[];locked=false;render();},600);
+    }
+  }
+}
+
+function win(){
+  clearInterval(timerInt);
+  var score=Math.max(0,1000-Math.floor(timer*2+moves*10));
+  document.getElementById('result').innerHTML='<p style="color:#ffd700;">🎉 完成！用时'+timer+'秒，'+moves+'步  |  得分：'+score+'</p>';
+  submitScore(score);
+}
+
+function submitScore(s){
+  if(!App.token){App.token=localStorage.getItem('sm_token')||null;}
+  if(!App.token) return;
+  fetch('/api/leaderboard',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+App.token},body:JSON.stringify({score:s,difficulty:'normal',game_type:'memory'})}).catch(function(){});
+}
+
+App.token=localStorage.getItem('sm_token')||null;
+if(App.token){fetch('/api/auth/me',{headers:{Authorization:'Bearer '+App.token}}).then(function(r){return r.json();}).then(function(d){if(d.user)App.user=d.user;});}
+startGame();
+</script>
+</body>
+</html>

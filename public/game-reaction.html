@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>反应速度 - 叠塔大师</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { display:flex; justify-content:center; align-items:center; height:100vh; background:#1a1a2e; flex-direction:column; touch-action:manipulation; user-select:none; }
+  .rx-wrap { width:100vw; max-width:450px; text-align:center; color:#fff; padding:20px; }
+  .rx-screen {
+    width:100%; max-width:340px; height:250px; margin:20px auto;
+    border-radius:20px; display:flex; align-items:center; justify-content:center;
+    font-size:24px; font-weight:700; cursor:pointer; transition:background 0.1s;
+    border:2px solid rgba(255,255,255,0.1);
+  }
+  .rx-wait { background:#2a2a4a; color:#888; }
+  .rx-ready { background:#cc3333; color:#fff; }
+  .rx-go { background:#33cc66; color:#fff; }
+  .rx-early { background:#ff6b6b; color:#fff; }
+  .rx-stats { display:flex; justify-content:space-around; margin:12px 0; font-size:14px; color:#aaa; }
+  .rx-stats span { color:#ffd700; font-weight:700; }
+  .rx-result { font-size:32px; font-weight:900; margin:8px 0; }
+</style>
+</head>
+<body>
+
+<div class="rx-wrap">
+  <h2>🎯 反应速度</h2>
+  <p style="color:#888;font-size:13px;">屏幕变绿后尽快点击！</p>
+  <div class="rx-screen rx-wait" id="screen" onclick="handleClick()">点击开始</div>
+  <div class="rx-stats">
+    <div>轮次：<span id="round">0/5</span></div>
+    <div>最佳：<span id="best">-</span></div>
+  </div>
+  <div class="rx-result" id="result"></div>
+  <div>
+    <button class="btn btn-sm" onclick="startRound()">🔄 重新开始</button>
+    <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+var phase='idle',startTime=0,timeoutId=null,round=0,totalRounds=5,times=[],bestTime=0;
+
+function handleClick(){
+  if(phase==='idle') startRound();
+  else if(phase==='waiting'){earlyClick();}
+  else if(phase==='ready'){react();}
+}
+
+function startRound(){
+  if(round>=totalRounds){round=0;times=[];bestTime=0;document.getElementById('result').innerHTML='';}
+  phase='waiting';
+  var s=document.getElementById('screen');
+  s.className='rx-screen rx-ready';s.textContent='等待...';
+  var delay=1000+Math.random()*3000;
+  timeoutId=setTimeout(function(){go();},delay);
+}
+
+function go(){
+  phase='ready';startTime=Date.now();
+  var s=document.getElementById('screen');
+  s.className='rx-screen rx-go';s.textContent='现在点击！';
+}
+
+function earlyClick(){
+  clearTimeout(timeoutId);
+  var s=document.getElementById('screen');
+  s.className='rx-screen rx-early';s.textContent='太早了！';
+  times.push(999);
+  phase='idle';round++;
+  document.getElementById('round').textContent=round+'/'+totalRounds;
+  document.getElementById('screen').className='rx-screen rx-wait';
+  document.getElementById('screen').textContent='点击开始下一轮';
+  if(round>=totalRounds) endGame();
+}
+
+function react(){
+  var rt=Date.now()-startTime;
+  times.push(rt);
+  if(rt<bestTime||bestTime===0) bestTime=rt;
+  round++;phase='idle';
+  document.getElementById('round').textContent=round+'/'+totalRounds;
+  document.getElementById('best').textContent=bestTime+'ms';
+  var s=document.getElementById('screen');
+  s.className='rx-screen rx-wait';s.textContent=rt+'ms !';
+  if(round>=totalRounds) endGame();
+}
+
+function endGame(){
+  var valid=times.filter(function(t){return t<999;});
+  var avg=valid.length>0?Math.round(valid.reduce(function(a,b){return a+b;},0)/valid.length):999;
+  var score=Math.max(0,Math.round(10000/avg));
+  document.getElementById('result').innerHTML='平均反应：'+avg+'ms | 得分：'+score;
+  document.getElementById('screen').textContent='完成！平均 '+avg+'ms';
+  submitScore(score);
+}
+
+function submitScore(s){
+  if(!App.token){App.token=localStorage.getItem('sm_token')||null;}
+  if(!App.token) return;
+  fetch('/api/leaderboard',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+App.token},body:JSON.stringify({score:s,difficulty:'normal',game_type:'reaction'})}).catch(function(){});
+}
+
+App.token=localStorage.getItem('sm_token')||null;
+if(App.token){fetch('/api/auth/me',{headers:{Authorization:'Bearer '+App.token}}).then(function(r){return r.json();}).then(function(d){if(d.user)App.user=d.user;});}
+</script>
+</body>
+</html>

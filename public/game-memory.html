@@ -32,6 +32,7 @@
   </div>
   <div class="mem-grid" id="grid"></div>
   <div id="result" style="margin:12px 0;min-height:30px;"></div>
+  <div id="coachPanel" style="max-width:340px;margin:0 auto;"></div>
   <div class="btn-row">
     <button class="btn btn-sm" onclick="startGame()">🔄 重新开始</button>
     <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
@@ -39,6 +40,7 @@
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/coach.js"></script>
 <script>
 var cards=[],flipped=[],matched=[],moves=0,pairs=0,timer=0,timerInt=null,locked=false;
 var emojis=['🍎','🍋','🍇','🍒','🌈','⭐','🔥','💎'];
@@ -89,6 +91,8 @@ function win(){
   clearInterval(timerInt);
   var score=Math.max(0,1000-Math.floor(timer*2+moves*10));
   document.getElementById('result').innerHTML='<p style="color:#ffd700;">🎉 完成！用时'+timer+'秒，'+moves+'步  |  得分：'+score+'</p>';
+  var analysis=Coach.analyzeMemory(timer,moves,pairs);
+  Coach.render(analysis,'coachPanel');
   submitScore(score);
 }
 

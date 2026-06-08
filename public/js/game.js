@@ -191,6 +191,11 @@ App.Game = {
     this.updateReviveBtn();
 
     App.submitScore(this.score, this.difficulty);
+
+    // AI 教练分析
+    var analysis = Coach.analyzeStack(this.score, this.difficulty, this.combo);
+    Coach.render(analysis, 'coachPanel');
+
     this.updateHud();
   },
 

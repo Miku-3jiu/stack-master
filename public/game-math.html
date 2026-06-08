@@ -34,6 +34,7 @@
   <div class="math-question" id="question">3 × 7 = ?</div>
   <div class="math-answers" id="answers"></div>
   <div id="result" style="margin:16px 0;min-height:30px;"></div>
+  <div id="coachPanel" style="max-width:340px;margin:0 auto;"></div>
   <div>
     <button class="btn btn-sm" onclick="startGame()">🔄 重新开始</button>
     <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
@@ -41,6 +42,7 @@
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/coach.js"></script>
 <script>
 var score=0,correct=0,timeLeft=15,timerId=null,playing=false;
 
@@ -108,6 +110,8 @@ function endGame(){
   document.getElementById('result').innerHTML='<p style="font-size:20px;color:#ffd700;">⏱ 时间到！答对'+correct+'题，得分'+score+'</p>';
   document.getElementById('answers').innerHTML='';
   document.getElementById('question').textContent='游戏结束';
+  var analysis=Coach.analyzeMath(correct,15);
+  Coach.render(analysis,'coachPanel');
   submitScore(score);
 }
 

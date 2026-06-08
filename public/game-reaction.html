@@ -34,6 +34,7 @@
     <div>最佳：<span id="best">-</span></div>
   </div>
   <div class="rx-result" id="result"></div>
+  <div id="coachPanel" style="max-width:340px;margin:0 auto;"></div>
   <div>
     <button class="btn btn-sm" onclick="startRound()">🔄 重新开始</button>
     <a href="index.html"><button class="btn-sm">🏠 游戏大厅</button></a>
@@ -41,6 +42,7 @@
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/coach.js"></script>
 <script>
 var phase='idle',startTime=0,timeoutId=null,round=0,totalRounds=5,times=[],bestTime=0;
 
@@ -95,6 +97,8 @@ function endGame(){
   var score=Math.max(0,Math.round(10000/avg));
   document.getElementById('result').innerHTML='平均反应：'+avg+'ms | 得分：'+score;
   document.getElementById('screen').textContent='完成！平均 '+avg+'ms';
+  var analysis=Coach.analyzeReaction(avg);
+  Coach.render(analysis,'coachPanel');
   submitScore(score);
 }
 

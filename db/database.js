@@ -65,6 +65,53 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_ach_user ON achievements(user_id);
   `);
 
+  // 数据库迁移：给老表加新字段
+  try {
+    var cols = db.prepare("PRAGMA table_info(scores)").all();
+    var hasGameType = false;
+    for (var i = 0; i < cols.length; i++) {
+      if (cols[i].name === 'game_type') hasGameType = true;
+    }
+    if (!hasGameType) {
+      db.exec("ALTER TABLE scores ADD COLUMN game_type TEXT NOT NULL DEFAULT 'stack'");
+      console.log('数据库迁移：已添加 game_type 字段');
+    }
+  } catch(e) { console.log('迁移跳过:', e.message); }
+
+  try {
+    var ucols = db.prepare("PRAGMA table_info(users)").all();
+    var hasNickname = false;
+    for (var j = 0; j < ucols.length; j++) {
+      if (ucols[j].name === 'nickname') hasNickname = true;
+    }
+    if (!hasNickname) {
+      db.exec("ALTER TABLE users ADD COLUMN nickname TEXT NOT NULL DEFAULT ''");
+      console.log('数据库迁移：已添加 nickname 字段');
+    }
+    var hasRevive = false;
+    for (var k = 0; k < ucols.length; k++) {
+      if (ucols[k].name === 'revive_tokens') hasRevive = true;
+    }
+    if (!hasRevive) {
+      db.exec("ALTER TABLE users ADD COLUMN revive_tokens INTEGER NOT NULL DEFAULT 0");
+    }
+    var hasRefresh = false;
+    for (var m = 0; m < ucols.length; m++) {
+      if (ucols[m].name === 'last_item_refresh') hasRefresh = true;
+    }
+    if (!hasRefresh) {
+      db.exec("ALTER TABLE users ADD COLUMN last_item_refresh TEXT NOT NULL DEFAULT (date('now'))");
+    }
+    var hasGames = false;
+    for (var n = 0; n < ucols.length; n++) {
+      if (ucols[n].name === 'games_played') hasGames = true;
+    }
+    if (!hasGames) {
+      db.exec("ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0");
+      db.exec("ALTER TABLE users ADD COLUMN total_layers INTEGER NOT NULL DEFAULT 0");
+    }
+  } catch(e) { console.log('迁移跳过:', e.message); }
+
   console.log('数据库已就绪: ' + dbPath);
   return db;
 }

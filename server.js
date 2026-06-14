@@ -33,5 +33,5 @@ app.get('*', function(req, res) {
 
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
-  console.log('叠塔大师服务器已启动: http://localhost:' + PORT);
+  console.log('轻游盒子已启动: http://localhost:' + PORT);
 });
